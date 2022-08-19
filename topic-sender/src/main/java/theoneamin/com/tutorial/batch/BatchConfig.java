@@ -7,12 +7,16 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import theoneamin.com.tutorial.batch.listeners.OrderJobListener;
+import theoneamin.com.tutorial.batch.listeners.OrderStepListener;
+import theoneamin.com.tutorial.batch.processor.OrderProcessor;
 
 import javax.sql.DataSource;
 import java.util.Random;
@@ -28,27 +32,35 @@ public class BatchConfig {
     @Autowired
     DataSource dataSource;
 
-    private final String JOB_NAME = "orderSenderJob";
-    private final String STEP_NAME = "orderSenderStep";
+    private final String JOB_NAME = "batchReaderJob";
+    private final String STEP_NAME = "batchReaderStep";
 
     Random random = new Random();
     int randomInt = random.nextInt();
 
 
     @Bean
-    public Job orderSenderJob() {
+    public Job batchReaderJob() {
         return jobBuilderFactory.get(JOB_NAME+randomInt)
-                .start(orderSenderStep())
+                .start(batchReaderStep())
+                .listener(new OrderJobListener())
                 .build();
     }
 
     @Bean
-    public Step orderSenderStep() {
+    public Step batchReaderStep() {
         return stepBuilderFactory.get(STEP_NAME)
                 .<Order, Order>chunk(100)
                 .reader(orderItemReader())
+                .processor(orderProcessor())
                 .writer(orderWriter())
+                .listener(new OrderStepListener())
                 .build();
+    }
+
+    @Bean
+    public ItemProcessor<Order, Order> orderProcessor() {
+        return new OrderProcessor();
     }
 
     @Bean
